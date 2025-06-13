@@ -1,0 +1,21 @@
+{
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "maven.terminal.favorites": [
+    {
+      "command": "clean compile",
+      "debug": false
+    },
+    {
+      "command": "clean install",
+      "debug": false
+    },
+    {
+      "command": "clean package",
+      "debug": false
+    },
+    {
+      "command": "clean compile assembly:single",
+      "debug": false
+    }
+  ]
+}
