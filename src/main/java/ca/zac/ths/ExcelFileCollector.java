@@ -6,6 +6,8 @@ package ca.zac.ths;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,7 +25,7 @@ public class ExcelFileCollector {
     List<ExcelFileInfo> fileInfoList = new ArrayList<>();
 
     if (parentDir == null) {
-      System.out.println("updater目录路径无效");
+      System.out.println("目录路径无效");
       return fileInfoList;
     }
 
@@ -64,6 +66,11 @@ public class ExcelFileCollector {
       }
     } else {
       System.out.println("目录不存在或没有符合条件的文件");
+    }
+    Collections.sort(fileInfoList, (a, b) -> a.getDatePart().compareTo(b.getDatePart()));
+    System.out.println("找到 " + fileInfoList.size() + " 个符合条件的文件。");
+    for (ExcelFileInfo info : fileInfoList) {
+      System.out.println(info);
     }
     return fileInfoList;
   }

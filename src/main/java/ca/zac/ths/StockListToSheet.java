@@ -61,7 +61,8 @@ public class StockListToSheet {
     // Loop stockList
     System.out.println("Stock count: " + stockList.size());
     for (int i = 0; i < stockList.size(); i++) {
-      System.out.println("Processing stock: " + stockList.get(i).getData().get(6) + " (" + i + ")");
+      System.out.println("Processing stock: " + stockList.get(i).getData().get(
+          Stock.getHeaderIndex("名称")) + " (" + i + ")");
       // Loop reasons
       for (int r = 0; r < stockList.get(i).getReasons().size(); r++) {
         // System.out.println("Processing stock: " + i + ", reason: " +
@@ -187,6 +188,18 @@ public class StockListToSheet {
               dataHuan = "  " + dataHuan; // 补齐长度
             }
             outputString += dataHuan + "%  ";
+          } else if (displayItems[i].equals("特大单买入金额")) {
+            Object dataLiu = stock.getData().get(j);
+            if (dataLiu instanceof Number) {
+              dataLiu = toYi((Double) dataLiu);
+            }
+            outputString += "特买" + dataLiu + "  ";
+          } else if (displayItems[i].equals("特大单净额")) {
+            Object dataLiu = stock.getData().get(j);
+            if (dataLiu instanceof Number) {
+              dataLiu = toYi((Double) dataLiu);
+            }
+            outputString += "特净" + dataLiu + "  ";
           } else {
             outputString += displayItems[i].substring(0, 1) + stock.getData().get(j) + "  ";
           }

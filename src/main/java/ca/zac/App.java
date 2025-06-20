@@ -38,10 +38,20 @@ public class App {
             return;
         }
         System.out.println("Found " + updaters.size() + " updater files.");
+        // step 2: get all marketinfo files
+        List<ExcelFileInfo> marketInfos = ExcelFileCollector.getFiles(marketInfoPath);
+        if (marketInfos.isEmpty()) {
+            System.out.println("No market info files found in the specified path.");
+            return;
+        }
+        System.out.println("Found " + marketInfos.size() + " market info files.");
+        if (marketInfos.size() > 1) {
+            System.out.println("Warning: More than one market info file found. Using the first one.");
+        }
 
         try (
                 // step 2: open marketinfo file and workbook
-                FileInputStream fisMarketInfo = new FileInputStream(marketInfoPath);
+                FileInputStream fisMarketInfo = new FileInputStream(marketInfos.get(0).getFilePath());
                 Workbook marketInfoWorkbook = new XSSFWorkbook(fisMarketInfo);) {
 
             // step 3: write update info in each file to marketinfo workbook
