@@ -3,6 +3,7 @@ package ca.zac;
 import ca.zac.ths.ExcelFileInfo;
 import ca.zac.ths.SheetToStockList;
 import ca.zac.ths.StockListToSheet;
+import ca.zac.ths.StockCountToSheet;
 import ca.zac.ths.WorkbookWriter;
 
 import java.io.FileInputStream;
@@ -62,7 +63,14 @@ public class App {
                         marketInfoWorkbook,
                         "概念全因",
                         displayItems);
+            }
 
+            for (ExcelFileInfo updater : updaters) {
+                StockCountToSheet.write(
+                        SheetToStockList.get(updater.getFilePath(), 0),
+                        updater.getDatePart(),
+                        marketInfoWorkbook,
+                        "概念全因数字");
             }
 
             // step 4: write final result to file

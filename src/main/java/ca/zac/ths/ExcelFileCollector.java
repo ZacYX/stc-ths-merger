@@ -6,7 +6,6 @@ package ca.zac.ths;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -36,6 +35,8 @@ public class ExcelFileCollector {
     // String regex = "^" + Pattern.quote(prefix) + "([A-Za-z0-9]+)\\.xlsx$";
     // //字母或数字
     // String regex = "^" + Pattern.quote(prefix) + "([^/\\\\:*?\"<>|]+)\\.xlsx$";
+    // String regex = "(?i)^" + Pattern.quote(prefix) +
+    // "([^/\\\\:*?\"<>|]+)\\.(?:xls|xlsx)$";
     String regex = "(?i)^" + Pattern.quote(prefix) + "([^/\\\\:*?\"<>|]+)\\.(?:xls|xlsx)$";
     // // 字符，数字或字母
     final Pattern pattern = Pattern.compile(regex);
@@ -55,7 +56,8 @@ public class ExcelFileCollector {
       for (File file : files) {
         Matcher matcher = pattern.matcher(file.getName());
         if (matcher.matches()) {
-          String datePart = matcher.group(1); // 提取 u 后面的4位数字
+          // String datePart = matcher.group(1); // 提取 u 后面的4位数字
+          String datePart = matcher.group(1).replaceAll("[^0-9]", ""); // 提取括号内的内容，并去掉非数字字符
           String fullPath = file.getAbsolutePath();
           ExcelFileInfo info = new ExcelFileInfo(fullPath, datePart);
           fileInfoList.add(info);

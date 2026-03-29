@@ -31,7 +31,7 @@ public class StockListToSheet {
     if (sheet.getLastRowNum() == -1) {
       Row newRow = sheet.createRow(0);
       newRow.createCell(0).setCellValue("类别");
-      newRow.createCell(0).setCellValue("当日统计");
+      newRow.createCell(1).setCellValue("当日统计");
     }
 
     // Insert a blank column after the first column to the dataSheet, adding 3 to
@@ -60,6 +60,7 @@ public class StockListToSheet {
 
     // Loop stockList
     System.out.println("Stock count: " + stockList.size());
+    CellStyle cellStyle = getStyle(sheet.getWorkbook(), "LEFT", "TOP");
     for (int i = 0; i < stockList.size(); i++) {
       System.out.println("Processing stock: " + stockList.get(i).getData().get(
           Stock.getHeaderIndex("名称")) + " (" + i + ")");
@@ -69,7 +70,7 @@ public class StockListToSheet {
         // stockList.get(i).getReasons().get(r));
         Boolean isNewCategory = true;
         // Loop excel sheet
-        for (int j = 0; j <= sheet.getLastRowNum() + 1; j++) {
+        for (int j = 1; j <= sheet.getLastRowNum() + 1; j++) {
           // System.out.println("Checking row: " + j + ", category: " +
           // stockList.get(i).getReasons().get(r));
           // This is a blank row, create a new one
@@ -80,7 +81,6 @@ public class StockListToSheet {
             // Write formated stock info
             Cell newCell = newRow.createCell(2);
             newCell.setCellValue(formatDisplay("", stockList.get(i), displayItems));
-            CellStyle cellStyle = getStyle(sheet.getWorkbook(), "LEFT", "TOP");
             newCell.setCellStyle(cellStyle);
             // Wirte the second row with 1
             newRow.createCell(1).setCellValue(1);
@@ -94,9 +94,22 @@ public class StockListToSheet {
             continue;
           }
           Cell cellCategory = currentRow.getCell(0);
-          if (cellCategory == null
-              || !stockList.get(i).getReasons().get(r).contains(cellCategory.getStringCellValue().trim())) {
+          if (cellCategory == null) {
             continue;
+          }
+          // for custom category, split by "|"
+          String[] categoryContent = cellCategory.getStringCellValue().trim().split("\\|");
+          int k = 0;
+          for (; k < categoryContent.length; k++) {
+            // System.out.println("Checking category content: " + categoryContent[k].trim()
+            // + ", reason: " +
+            // stockList.get(i).getReasons().get(r));
+            if (stockList.get(i).getReasons().get(r).contains(categoryContent[k].trim())) {
+              break;
+            }
+          }
+          if (k == categoryContent.length) {
+            continue; // not found, continue to next row
           }
           // Found existing category
           Cell cellContent = currentRow.getCell(2);
@@ -105,10 +118,22 @@ public class StockListToSheet {
           }
           String content = formatDisplay(cellContent.getStringCellValue(), stockList.get(i), displayItems);
           cellContent.setCellValue(content);
-          CellStyle cellStyle = getStyle(sheet.getWorkbook(), "LEFT", "TOP");
           cellContent.setCellStyle(cellStyle);
           // update number of second column
-          currentRow.getCell(1).setCellValue(currentRow.getCell(1).getNumericCellValue() + 1);
+          // currentRow.getCell(1).setCellValue(currentRow.getCell(1).getNumericCellValue()
+          // + 1);
+          if (currentRow.getCell(1) == null) {
+            currentRow.createCell(1).setCellValue(0);
+          } else if (currentRow.getCell(1).getCellType() == CellType.NUMERIC) {
+            currentRow.getCell(1).setCellValue(currentRow.getCell(1).getNumericCellValue() + 1);
+          } else if (currentRow.getCell(1).getCellType() == CellType.STRING) {
+            // If the cell is a string, parse it to an integer and add 1
+            currentRow.getCell(1).setCellValue(
+                String.valueOf(Integer.parseInt(currentRow.getCell(1).getStringCellValue()) + 1));
+          } else {
+            // If the cell is not numeric or string, set it to 0
+            currentRow.getCell(1).setCellValue(0);
+          }
           isNewCategory = false;
 
         }
@@ -122,90 +147,98 @@ public class StockListToSheet {
     // 连续涨停天数+名称+首次涨停时间+涨停开板次数+最终涨停时间+涨停成交额+总金额+封单额+换手+流通市值
     SimpleDateFormat sdf = new SimpleDateFormat("hh:mm:ss");
     String outputString = "";
-    // Loop displayItems
-    for (int i = 0; i < displayItems.length; i++) {
-      // Loop items in stock
-      for (int j = 0; j < Stock.headers.size(); j++) {
-        if (removeBracketContent(Stock.headers.get(j)).equals(displayItems[i])) {
-          if (displayItems[i].equals("连续涨停天数")) {
-            int days = (int) Double.parseDouble(stock.getData().get(j).toString());
-            outputString += (days > 1) ? days : "  ";
-          } else if (displayItems[i].equals("名称")) {
-            // Avoid multiple stock in on cell
-            // String stockName = stock.getData().get(j).toString().trim();
-            String stockName = stock.getData().get(j).toString().replaceAll("[\\s\\u3000]+", "").trim();
-            if (originContent.contains(stockName)) {
-              return originContent;
-            }
-            outputString += stockName;
-            outputString += (stockName.length() < 4) ? "      " : "  ";
-          } else if (displayItems[i].equals("首次涨停时间") || displayItems[i].equals("最终涨停时间")) {
-            Object dateObj = stock.getData().get(j);
-            if (dateObj instanceof Date) {
-              outputString += sdf.format((Date) dateObj) + "  ";
+
+    try {
+      // Loop displayItems
+      for (int i = 0; i < displayItems.length; i++) {
+        // Loop items in stock
+        for (int j = 0; j < Stock.headers.size(); j++) {
+          if (removeBracketContent(Stock.headers.get(j)).equals(displayItems[i])) {
+            if (displayItems[i].equals("连续涨停天数")) {
+              int days = (int) Double.parseDouble(stock.getData().get(j).toString());
+              outputString += (days > 1) ? days : "  ";
+            } else if (displayItems[i].equals("名称")) {
+              // Avoid multiple stock in on cell
+              // String stockName = stock.getData().get(j).toString().trim();
+              String stockName = stock.getData().get(j).toString().replaceAll("[\\s\\u3000]+", "").trim();
+              if (originContent.contains(stockName)) {
+                return originContent;
+              }
+              outputString += stockName;
+              outputString += (stockName.length() < 4) ? "      " : "  ";
+            } else if (displayItems[i].equals("首次涨停时间") || displayItems[i].equals("最终涨停时间")) {
+              Object dateObj = stock.getData().get(j);
+              if (dateObj instanceof Date) {
+                outputString += sdf.format((Date) dateObj) + "  ";
+              } else {
+                outputString += dateObj.toString() + "  ";
+              }
+            } else if (displayItems[i].equals("涨停开板次数")) {
+              outputString += "K" + stock.getData().get(j).toString().split("\\.")[0] + "  ";
+            } else if (displayItems[i].equals("涨停成交额")) {
+              String amount = parseAmountOn10Per(stock.getData().get(j).toString()).toString();
+              if (amount.length() < 4) {
+                amount = amount + "  "; // 补齐长度
+              }
+              outputString += amount + "/";
+            } else if (displayItems[i].equals("总金额")) {
+              String amount = toYi((Double) stock.getData().get(j)).toString();
+              if (amount.length() < 4) {
+                amount = "  " + amount + "  "; // 补齐长度
+              } else if (amount.length() < 5) {
+                amount = "  " + amount; // 补齐长度
+              }
+              outputString += amount + "  ";
+            } else if (displayItems[i].equals("封单额")) {
+              Object data = stock.getData().get(j);
+              if (data instanceof Number) {
+                data = toYi((Double) data);
+              }
+              String dataString = data.toString();
+              if (dataString.length() < 4) {
+                data = data + "  "; // 补齐长度
+              }
+              outputString += "封" + data + "  ";
+            } else if (displayItems[i].equals("流通市值")) {
+              Object dataLiu = stock.getData().get(j);
+              if (dataLiu instanceof Number) {
+                dataLiu = toYi((Double) dataLiu);
+              }
+              outputString += "流" + dataLiu + "  ";
+            } else if (displayItems[i].equals("换手")) {
+              Object dataHuan = stock.getData().get(j);
+              if (dataHuan instanceof Number) {
+                dataHuan = Math.round((Double) dataHuan * 100.0); // 保留两位小数
+              }
+              String dataHuanString = dataHuan.toString();
+              if (dataHuanString.length() < 2) {
+                dataHuan = "  " + dataHuan; // 补齐长度
+              }
+              outputString += dataHuan + "%  ";
+            } else if (displayItems[i].equals("特大单买入金额")) {
+              Object dataLiu = stock.getData().get(j);
+              if (dataLiu instanceof Number) {
+                dataLiu = toYi((Double) dataLiu);
+              }
+              outputString += "特买" + dataLiu + "  ";
+            } else if (displayItems[i].equals("特大单净额")) {
+              Object dataLiu = stock.getData().get(j);
+              if (dataLiu instanceof Number) {
+                dataLiu = toYi((Double) dataLiu);
+              }
+              outputString += "特净" + dataLiu + "  ";
             } else {
-              outputString += dateObj.toString() + "  ";
+              outputString += displayItems[i].substring(0, 1) + stock.getData().get(j) + "  ";
             }
-          } else if (displayItems[i].equals("涨停开板次数")) {
-            outputString += "K" + stock.getData().get(j).toString().split("\\.")[0] + "  ";
-          } else if (displayItems[i].equals("涨停成交额")) {
-            String amount = parseAmountOn10Per(stock.getData().get(j).toString()).toString();
-            if (amount.length() < 4) {
-              amount = amount + "  "; // 补齐长度
-            }
-            outputString += amount + "/";
-          } else if (displayItems[i].equals("总金额")) {
-            String amount = toYi((Double) stock.getData().get(j)).toString();
-            if (amount.length() < 4) {
-              amount = "  " + amount + "  "; // 补齐长度
-            } else if (amount.length() < 5) {
-              amount = "  " + amount; // 补齐长度
-            }
-            outputString += amount + "  ";
-          } else if (displayItems[i].equals("封单额")) {
-            Object data = stock.getData().get(j);
-            if (data instanceof Number) {
-              data = toYi((Double) data);
-            }
-            String dataString = data.toString();
-            if (dataString.length() < 4) {
-              data = data + "  "; // 补齐长度
-            }
-            outputString += "封" + data + "  ";
-          } else if (displayItems[i].equals("流通市值")) {
-            Object dataLiu = stock.getData().get(j);
-            if (dataLiu instanceof Number) {
-              dataLiu = toYi((Double) dataLiu);
-            }
-            outputString += "流" + dataLiu + "  ";
-          } else if (displayItems[i].equals("换手")) {
-            Object dataHuan = stock.getData().get(j);
-            if (dataHuan instanceof Number) {
-              dataHuan = Math.round((Double) dataHuan * 100.0); // 保留两位小数
-            }
-            String dataHuanString = dataHuan.toString();
-            if (dataHuanString.length() < 2) {
-              dataHuan = "  " + dataHuan; // 补齐长度
-            }
-            outputString += dataHuan + "%  ";
-          } else if (displayItems[i].equals("特大单买入金额")) {
-            Object dataLiu = stock.getData().get(j);
-            if (dataLiu instanceof Number) {
-              dataLiu = toYi((Double) dataLiu);
-            }
-            outputString += "特买" + dataLiu + "  ";
-          } else if (displayItems[i].equals("特大单净额")) {
-            Object dataLiu = stock.getData().get(j);
-            if (dataLiu instanceof Number) {
-              dataLiu = toYi((Double) dataLiu);
-            }
-            outputString += "特净" + dataLiu + "  ";
-          } else {
-            outputString += displayItems[i].substring(0, 1) + stock.getData().get(j) + "  ";
+            break;
           }
-          break;
         }
       }
+
+    } catch (Exception e) {
+      System.err.println("Error formatting display for stock: " + stock.getData().get(Stock.getHeaderIndex("名称")));
+      e.printStackTrace();
+      return originContent + outputString + "\n";
     }
     return originContent + outputString + "\n";
 
