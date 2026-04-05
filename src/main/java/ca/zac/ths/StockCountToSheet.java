@@ -3,10 +3,11 @@ package ca.zac.ths;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellReference;
 
 public class StockCountToSheet {
-  final static Integer CATEGORY_NAME_COLUMN_INDEX = 1;
   final static Integer SUM_COLUMN_INDEX = 0;
+  final static Integer CATEGORY_NAME_COLUMN_INDEX = 1;
   final static Integer INSERTED_COLUMN_INDEX = 2;
 
   public static void write(
@@ -14,6 +15,8 @@ public class StockCountToSheet {
       String date,
       Workbook workbook,
       String sheetName) {
+
+    workbook.setForceFormulaRecalculation(true);
 
     Sheet sheet = workbook.getSheet(sheetName);
     if (sheet == null) {
@@ -28,26 +31,32 @@ public class StockCountToSheet {
 
   private static void prepareSheet(Sheet sheet, String date, Integer stockListSize) {
     // Blank sheet
+    CellStyle cellStyle = getStyle(sheet.getWorkbook(), "CENTER", "CENTER");
+
     if (sheet.getLastRowNum() == -1) {
       Row newRow = sheet.createRow(0);
-      newRow.createCell(CATEGORY_NAME_COLUMN_INDEX).setCellValue("类别");
-      newRow.createCell(SUM_COLUMN_INDEX).setCellValue("当日统计");
+      Cell newSumCell = newRow.createCell(SUM_COLUMN_INDEX);
+      newSumCell.setCellValue("当日统计");
+      newSumCell.setCellStyle(cellStyle);
+      Cell newCatCell = newRow.createCell(CATEGORY_NAME_COLUMN_INDEX);
+      newCatCell.setCellValue("类别");
+      newCatCell.setCellStyle(cellStyle);
     }
 
     // Insert a blank column after the first column to the dataSheet, adding 3 to
     // solve outofbounds exception
     sheet.shiftColumns(2, sheet.getRow(0).getLastCellNum() + 3, 1);
-    Cell newCell = sheet.getRow(0).createCell(2);
-    newCell.setCellValue(date + " " + stockListSize);
-    CellStyle cellStyle = getStyle(sheet.getWorkbook(), "CENTER", "CENTER");
-    newCell.setCellStyle(cellStyle);
+    Cell newInsCell = sheet.getRow(0).createCell(2);
+    newInsCell.setCellValue(date + " " + stockListSize);
+    newInsCell.setCellStyle(cellStyle);
   }
 
   private static void insertData(Sheet sheet, List<Stock> stockList) {
 
     // Loop stockList
     System.out.println("Stock count: " + stockList.size());
-    CellStyle cellStyle = getStyle(sheet.getWorkbook(), "LEFT", "TOP");
+    CellStyle cellStyle = getStyle(sheet.getWorkbook(), "CENTER", "CENTER");
+
     for (int i = 0; i < stockList.size(); i++) {
       System.out.println("Processing stock: " + stockList.get(i).getData().get(
           Stock.getHeaderIndex("名称")) + " (" + i + ")");
@@ -64,10 +73,23 @@ public class StockCountToSheet {
           if (isNewCategory && j == sheet.getLastRowNum() + 1) {
             Row newRow = sheet.createRow(j);
             // Write category name
-            newRow.createCell(CATEGORY_NAME_COLUMN_INDEX).setCellValue(stockList.get(i).getReasons().get(r));
-            newRow.createCell(SUM_COLUMN_INDEX).setCellValue(0);
+            Cell newCatCell = newRow.createCell(CATEGORY_NAME_COLUMN_INDEX);
+            newCatCell.setCellValue(stockList.get(i).getReasons().get(r));
+            newCatCell.setCellStyle(cellStyle);
+            // write fisrt column with as sum cell
+            Cell newSumCell = newRow.createCell(SUM_COLUMN_INDEX);
+            // newSumCell.setCellValue(0);
+            newSumCell.setCellStyle(cellStyle);
+            int currentRowNum = newRow.getRowNum() + 1;
+            String colLetter = CellReference.convertNumToColString(newSumCell.getColumnIndex() + 1);
+            String endColLetter = CellReference.convertNumToColString(newSumCell.getColumnIndex() + 20);
+            newSumCell.setCellFormula("SUM(" + colLetter + currentRowNum + ":" +
+                endColLetter + currentRowNum + ")");
+
             // Wirte the second row with 1
-            newRow.createCell(INSERTED_COLUMN_INDEX).setCellValue(1);
+            Cell newInsCell = newRow.createCell(INSERTED_COLUMN_INDEX);
+            newInsCell.setCellValue(1);
+            newInsCell.setCellStyle(cellStyle);
             break;
           }
 
@@ -100,7 +122,10 @@ public class StockCountToSheet {
           // currentRow.getCell(1).setCellValue(currentRow.getCell(1).getNumericCellValue()
           // + 1);
           if (currentRow.getCell(INSERTED_COLUMN_INDEX) == null) {
-            currentRow.createCell(INSERTED_COLUMN_INDEX).setCellValue(0);
+            // currentRow.createCell(INSERTED_COLUMN_INDEX).setCellValue(0);
+            Cell newInsCell = currentRow.createCell(INSERTED_COLUMN_INDEX);
+            newInsCell.setCellStyle(cellStyle);
+            newInsCell.setCellValue(1);
           } else if (currentRow.getCell(INSERTED_COLUMN_INDEX).getCellType() == CellType.NUMERIC) {
             currentRow.getCell(INSERTED_COLUMN_INDEX).setCellValue(currentRow.getCell(
                 INSERTED_COLUMN_INDEX).getNumericCellValue() + 1);
@@ -112,7 +137,7 @@ public class StockCountToSheet {
                         INSERTED_COLUMN_INDEX).getStringCellValue()) + 1));
           } else {
             // If the cell is not numeric or string, set it to 0
-            currentRow.getCell(INSERTED_COLUMN_INDEX).setCellValue(0);
+            // currentRow.getCell(INSERTED_COLUMN_INDEX).setCellValue(0);
           }
           isNewCategory = false;
 

@@ -61,6 +61,7 @@ public class StockListToSheet {
     // Loop stockList
     System.out.println("Stock count: " + stockList.size());
     CellStyle cellStyle = getStyle(sheet.getWorkbook(), "LEFT", "TOP");
+
     for (int i = 0; i < stockList.size(); i++) {
       System.out.println("Processing stock: " + stockList.get(i).getData().get(
           Stock.getHeaderIndex("名称")) + " (" + i + ")");
@@ -82,7 +83,7 @@ public class StockListToSheet {
             Cell newCell = newRow.createCell(2);
             newCell.setCellValue(formatDisplay("", stockList.get(i), displayItems));
             newCell.setCellStyle(cellStyle);
-            // Wirte the second row with 1
+            // Wirte the second cell with 1
             newRow.createCell(1).setCellValue(1);
             break;
           }
